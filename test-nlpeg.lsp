@@ -18,5 +18,10 @@
 
 (define-test (test_sequence_of_expressions)
              (assert= (:value (:parse-rule x-parser "3num3chars" "123abc")) '(("123") ("abc"))))
+(define-test (test_failed_sequence_of_expressions_0)
+             (assert= (:value (:parse-rule x-parser "3num3chars" "abc123")) nil))
+
+(define-test (test_failed_sequence_of_expressions_3)
+             (assert= (:value (:parse-rule x-parser "3num3chars" "123...")) nil))
 
 (UnitTest:run-all 'MAIN)
