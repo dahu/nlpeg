@@ -197,6 +197,30 @@
               (NLPEG-ParseResult true str (:pos input)
                              (map (fn (x) (:value x)) res) nil))))))
 
+(context MAIN)
+(new NLPEG-Expression 'NLPEG-Predicate)
+(context NLPEG-Predicate)
+(define (NLPEG-Predicate:NLPEG-Predicate expr type) (list MAIN:NLPEG-Predicate expr type))
+(define (NLPEG-Predicate:expr) (self 1))
+(define (NLPEG-Predicate:type) (self 2))
+
+;; expression many matcher
+;; input is a NLPEG-ParseResult with
+;; :str - the input string
+;; :pos - the current parse position
+(define (NLPEG-Predicate:m input parser)
+  (letn ((expr (:get-rule parser (:expr (self))))
+         (type (:type (self)))
+         (str (:str input))
+         (pos (:pos input))
+         (a-match (:match expr input parser))
+         (is-matched nil))
+        (NLPEG:v (string "NLPEG-Predicate:m [" expr ":" type "]"))
+        (if (= type "has")
+          (setf is-matched (:is-matched? a-match))
+          (setf is-matched (not (:is-matched? a-match))))
+        (NLPEG-ParseResult is-matched str pos (:value a-match) nil)))
+
 ;; end of parser
 
 (context MAIN)
@@ -206,14 +230,20 @@
 
 (:add-rule x-parser '("digit"        (NLPEG-Expression {\d})))
 (:add-rule x-parser '("digits"       (NLPEG-Expression {\d+})))
+(:add-rule x-parser '("char"         (NLPEG-Expression {[a-z]})))
 (:add-rule x-parser '("chars"        (NLPEG-Expression {[a-z]+})))
-(:add-rule x-parser '("numsORchars"  (NLPEG-Choice ("digit" "chars"))))
+(:add-rule x-parser '("numsANDchars" (NLPEG-Sequence ("digits" "chars"))))
+(:add-rule x-parser '("numsORchars"  (NLPEG-Choice ("digits" "chars"))))
 (:add-rule x-parser '("maybeMany"    (NLPEG-Many "digit" 0 0)))
 (:add-rule x-parser '("many"         (NLPEG-Many "digit" 1 0)))
 (:add-rule x-parser '("maybeOne"     (NLPEG-Many "digit" 0 1)))
 (:add-rule x-parser '("between3to5"  (NLPEG-Many "digit" 3 5)))
+(:add-rule x-parser '("haschar"      (NLPEG-Predicate "char" "has")))
+(:add-rule x-parser '("nothaschar"   (NLPEG-Predicate "char" "not-has")))
 
-(println (:parse-rule x-parser "between3to5" "123abc"))
+(println (:parse-rule x-parser "haschar" "123"))
+;; (println (:parse-rule x-parser "nothaschar" "abc"))
+;; (println (:parse-rule x-parser "nothaschar" "123"))
 
 ;; ((seq (tok {\d+}) (tok {\w+})) "123hello" p f)
 ;; ((seq (tok {\d+}) (tok {[a-z]+}) (tok {\d+})) "123abc456" p f)

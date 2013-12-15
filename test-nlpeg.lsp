@@ -6,6 +6,7 @@
 (setf x-parser (NLPEG-Parser x-options))
 (:add-rule x-parser (list "digit"       (NLPEG-Expression {\d})))
 (:add-rule x-parser (list "digits"      (NLPEG-Expression {\d+})))
+(:add-rule x-parser (list "char"        (NLPEG-Expression {[a-z]})))
 (:add-rule x-parser (list "chars"       (NLPEG-Expression {[a-z]+})))
 (:add-rule x-parser (list "3num3chars"  (NLPEG-Sequence (list "digits" "chars"))))
 (:add-rule x-parser (list "numsORchars" (NLPEG-Choice (list "digits" "chars"))))
@@ -13,6 +14,8 @@
 (:add-rule x-parser (list "many"        (NLPEG-Many "digit" 1 0)))
 (:add-rule x-parser (list "maybeOne"    (NLPEG-Many "digit" 0 1)))
 (:add-rule x-parser (list "between3to5" (NLPEG-Many "digit" 3 5)))
+(:add-rule x-parser (list "haschar"     (NLPEG-Predicate "char" "has")))
+(:add-rule x-parser (list "nothaschar"  (NLPEG-Predicate "char" "not-has")))
 
 (define-test (test_default_start_rule)
              (assert= '("123") (:value (:parse x-parser "123abc"))))
@@ -67,5 +70,28 @@
              (assert= '(("1")("2")("3")("4")("5"))
                       (:value (:parse-rule x-parser "between3to5" "123456abc"))))
 
+(define-test (test_has_1)
+             (assert= '("a") (:value (:parse-rule x-parser "haschar" "abc"))))
+
+(define-test (test_has_2)
+             (assert= true (:is-matched? (:parse-rule x-parser "haschar" "abc"))))
+
+(define-test (test_has_3)
+             (assert= nil (:value (:parse-rule x-parser "haschar" "123"))))
+
+(define-test (test_has_4)
+             (assert= nil (:is-matched? (:parse-rule x-parser "haschar" "123"))))
+
+(define-test (test_not_has_1)
+             (assert= nil (:value (:parse-rule x-parser "nothaschar" "123"))))
+
+(define-test (test_not_has_2)
+             (assert= true (:is-matched? (:parse-rule x-parser "nothaschar" "123"))))
+
+(define-test (test_not_has_3)
+             (assert= '("a") (:value (:parse-rule x-parser "nothaschar" "abc"))))
+
+(define-test (test_not_has_4)
+             (assert= nil (:is-matched? (:parse-rule x-parser "nothaschar" "abc"))))
 
 (UnitTest:run-all 'MAIN)
