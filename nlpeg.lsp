@@ -11,16 +11,16 @@
 (define (error str) (println str))
 
 (context MAIN)
-(new Class 'ParseResult)
-(context ParseResult)
-(define (ParseResult:ParseResult is-matched str pos value errmsg)
-  (list MAIN:ParseResult is-matched str pos value errmsg))
-(define (ParseResult:is-matched) (self 1))
-(define (ParseResult:str) (self 2))
-(define (ParseResult:pos) (self 3))
-(define (ParseResult:set-pos new-pos) (setf ((self) 3) new-pos))
-(define (ParseResult:value) (self 4))
-(define (ParseResult:errmsg) (self 5))
+(new Class 'NLPEG-ParseResult)
+(context NLPEG-ParseResult)
+(define (NLPEG-ParseResult:NLPEG-ParseResult is-matched str pos value errmsg)
+  (list MAIN:NLPEG-ParseResult is-matched str pos value errmsg))
+(define (NLPEG-ParseResult:is-matched) (self 1))
+(define (NLPEG-ParseResult:str) (self 2))
+(define (NLPEG-ParseResult:pos) (self 3))
+(define (NLPEG-ParseResult:set-pos new-pos) (setf ((self) 3) new-pos))
+(define (NLPEG-ParseResult:value) (self 4))
+(define (NLPEG-ParseResult:errmsg) (self 5))
 
 (context MAIN)
 (new Class 'NLPEG-Parser)
@@ -44,34 +44,34 @@
   (:parse-rule (self) (:get-opt (self) "start-rule") str))
 (define (NLPEG-Parser:parse-rule rule str)
   (:match (:get-rule (self) rule)
-          (ParseResult nil str 0 nil nil)))
+          (NLPEG-ParseResult nil str 0 nil nil)))
 
 (context MAIN)
-(new Class 'Expression)
-(context Expression)
-(define (Expression:Expression pat) (list MAIN:Expression pat))
-(define (Expression:pat) (self 1))
+(new Class 'NLPEG-Expression)
+(context NLPEG-Expression)
+(define (NLPEG-Expression:NLPEG-Expression pat) (list MAIN:NLPEG-Expression pat))
+(define (NLPEG-Expression:pat) (self 1))
 
 ;; matcher
-;; input is a ParseResult with
+;; input is a NLPEG-ParseResult with
 ;; :str - the input string
 ;; :pos - the current parse position
-(define (Expression:m input)
+(define (NLPEG-Expression:m input)
   (letn ((pat (:pat (self)))
          (str (:str input))
          (pos (:pos input))
          (a-match (regex pat str NLPEG:REGEX-MASK pos)))
-        (NLPEG:v (string "Expression:m /" pat "/"))
+        (NLPEG:v (string "NLPEG-Expression:m /" pat "/"))
         (if (not a-match)
           (let ((errmsg (string "Failed to match /" pat "/ at char "
                                 pos " in '" str "'")))
             (NLPEG:v errmsg)
-            (ParseResult nil str pos nil errmsg))
-          (ParseResult true str
+            (NLPEG-ParseResult nil str pos nil errmsg))
+          (NLPEG-ParseResult true str
                        (+ pos (a-match NLPEG:END-POS))
                        (list (a-match NLPEG:MATCHED-STR)) nil))))
 
-(define (Expression:skip-white input)
+(define (NLPEG-Expression:skip-white input)
   ;; TODO: skip-white option
   (if true
     (if (regex {\s+} (:str input) NLPEG:REGEX-MASK (:pos input))
@@ -79,8 +79,8 @@
   input)
 
 ;; VimPEG's pmatch()
-(define (Expression:match input)
-  (let ((res (Expression:m (:skip-white (self) input))))
+(define (NLPEG-Expression:match input)
+  (let ((res (NLPEG-Expression:m (:skip-white (self) input))))
         (println input)
         (println res)))
 
@@ -92,8 +92,8 @@
 
 (setf x-options '(("start-rule" "digits")))
 (setf x-parser (NLPEG-Parser x-options))
-(:add-rule x-parser '("digits" (Expression {\d+})))
-(:add-rule x-parser '("chars" (Expression {[a-z]+})))
+(:add-rule x-parser '("digits" (NLPEG-Expression {\d+})))
+(:add-rule x-parser '("chars" (NLPEG-Expression {[a-z]+})))
 
 ;; ((seq (tok {\d+}) (tok {\w+})) "123hello" p f)
 ;; ((seq (tok {\d+}) (tok {[a-z]+}) (tok {\d+})) "123abc456" p f)
