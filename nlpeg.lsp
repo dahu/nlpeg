@@ -15,7 +15,7 @@
 (context NLPEG-ParseResult)
 (define (NLPEG-ParseResult:NLPEG-ParseResult is-matched str pos value errmsg)
   (list MAIN:NLPEG-ParseResult is-matched str pos value errmsg))
-(define (NLPEG-ParseResult:is-matched) (self 1))
+(define (NLPEG-ParseResult:is-matched?) (self 1))
 (define (NLPEG-ParseResult:str) (self 2))
 (define (NLPEG-ParseResult:pos) (self 3))
 (define (NLPEG-ParseResult:set-pos new-pos) (setf ((self) 3) new-pos))
@@ -32,6 +32,9 @@
 (define (NLPEG-Parser:get-opt opt) (lookup opt (self 1)))
 (define (NLPEG-Parser:grammar) (self 2))
 (define (NLPEG-Parser:add-rule rule) (push rule (self 2)))
+;; (define (NLPEG-Parser:add-rule rule) (push (list rule (list rule self)) (self 2)))
+;; (define (NLPEG-Parser:get-rule rule) (or (lookup rule (self 2)) (append rule (list self))))
+;; (define (NLPEG-Parser:get-rule rule) ((self 2) (find (list (list rule ?) ?) (self 2) unify)))
 (define (NLPEG-Parser:get-rule rule) (lookup rule (self 2)))
 ;; TODO: merge a default set of options in with user's options
 ;; start-rule
@@ -43,8 +46,12 @@
 (define (NLPEG-Parser:parse str)
   (:parse-rule (self) (:get-opt (self) "start-rule") str))
 (define (NLPEG-Parser:parse-rule rule str)
-  (:match (:get-rule (self) rule)
-          (NLPEG-ParseResult nil str 0 nil nil)))
+  (println (self))
+  (letn ((parser (self))
+         (rule (:get-rule (self) rule))
+        )
+  (println (string "rule-> " rule))
+  (:match rule (NLPEG-ParseResult nil str 0 nil nil) parser)))
 
 (context MAIN)
 (new Class 'NLPEG-Expression)
@@ -56,7 +63,7 @@
 ;; input is a NLPEG-ParseResult with
 ;; :str - the input string
 ;; :pos - the current parse position
-(define (NLPEG-Expression:m input)
+(define (NLPEG-Expression:m input parser)
   (letn ((pat (:pat (self)))
          (str (:str input))
          (pos (:pos input))
@@ -73,16 +80,60 @@
 
 (define (NLPEG-Expression:skip-white input)
   ;; TODO: skip-white option
+  (println "skip-white 1")
+  (println input)
   (if true
     (if (regex {\s+} (:str input) NLPEG:REGEX-MASK (:pos input))
       (:set-pos input ($it NLPEG:END-POS))))
   input)
 
 ;; VimPEG's pmatch()
-(define (NLPEG-Expression:match input)
-  (let ((res (NLPEG-Expression:m (:skip-white (self) input))))
+(define (NLPEG-Expression:match input parser)
+  (println input)
+  (println (string "match, parser-> " parser))
+  (let ((res (:m (self) (:skip-white (self) input) parser)))
         (println input)
         (println res)))
+
+(context MAIN)
+(new NLPEG-Expression 'NLPEG-Sequence)
+(context NLPEG-Sequence)
+(define (NLPEG-Sequence:NLPEG-Sequence seq) (list MAIN:NLPEG-Sequence seq))
+(define (NLPEG-Sequence:seq) (self 1))
+
+;; matcher
+;; input is a NLPEG-ParseResult with
+;; :str - the input string
+;; :pos - the current parse position
+(define (NLPEG-Sequence:m input parser)
+  (println (string "m, parser-> " parser))
+  (letn ((seq (:seq (self)))
+         (str (:str input))
+         (pos (:pos input))
+         (is-matched true)
+         (res '()))
+        (NLPEG:v (string "NLPEG-Sequence:m [" seq "]"))
+        (println seq)
+        (println parser)
+        (dolist (s seq (= is-matched nil))
+          (println (string "s-> " s))
+             (letn ((e (:get-rule parser s))
+                    (a-match (:match e input parser))
+                    )
+                   (println (string "e rule-> " e))
+                   (push a-match res -1)
+                   (if (not (:is-matched? a-match))
+                     (setf is-matched false)
+                     (:set-pos input (:pos a-match)))))
+        (if (not is-matched)
+          (let ((errmsg (string "Failed to match [" seq "] at char "
+                                pos " in '" str "'")))
+            (NLPEG:v errmsg)
+            (NLPEG-ParseResult nil str pos nil errmsg))
+          (NLPEG-ParseResult true str
+                       (:pos input)
+                       (map (fn (x) (:value x)) res) nil))))
+
 
 ;; (apply (fn (x y) (println x y)) '(a b c) 2)
 
@@ -94,6 +145,8 @@
 (setf x-parser (NLPEG-Parser x-options))
 (:add-rule x-parser '("digits" (NLPEG-Expression {\d+})))
 (:add-rule x-parser '("chars" (NLPEG-Expression {[a-z]+})))
+(:add-rule x-parser '("3num3chars" (NLPEG-Sequence ("digits" "chars"))))
+(:parse-rule x-parser "3num3chars" "123abc")
 
 ;; ((seq (tok {\d+}) (tok {\w+})) "123hello" p f)
 ;; ((seq (tok {\d+}) (tok {[a-z]+}) (tok {\d+})) "123abc456" p f)
