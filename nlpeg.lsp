@@ -38,6 +38,8 @@
 ;; skip-white
 ;; verbose
 ;; debug
+
+;; TODO: add the on-match callback to the add-rule call
 (define (NLPEG-Parser:parse str)
   (:parse-rule (self) (:get-opt (self) "start-rule") str))
 (define (NLPEG-Parser:parse-rule rule str)
@@ -88,37 +90,10 @@
 
 (context MAIN)
 
-(load "../../vendor/newlisp-unittest/nl-unittest.lsp")
-
-(define (p thunk inp)
-  (string "matched: " thunk ", leaving: -->" inp "<--"))
-
-(define (f re inp)
-  (string "failed to match " re " against " inp))
-
-
-;; (define-test (test_token-match)
-;;              (assert= {matched: 123, leaving:  hello}
-;;                       ((tok {\d+}) "123 hello" p f)))
-
-;;            (ParseResult is-matched str      pos value errmsg)
-
 (setf x-options '(("start-rule" "digits")))
 (setf x-parser (NLPEG-Parser x-options))
-;; TODO: add the on-match callback to the add-rule call
 (:add-rule x-parser '("digits" (Expression {\d+})))
 (:add-rule x-parser '("chars" (Expression {[a-z]+})))
-(println x-parser)
-(:parse x-parser "123abc")
-(:parse-rule x-parser "digits" "123abc")
-;; (:m (Expression {a})
-;;     (:m x-expr x-input)
-;;     )
 
-;; ((tok {\d+}) "123hello" p f)
-;; ((tok {\d+}) "123hello" (fn (m-result m-rest) (println (p m-result m-rest)) ((tok {\w+}) m-rest p f)))
-;; ((tok {\w+}) ((tok {\d+}) "123hello" p f))
 ;; ((seq (tok {\d+}) (tok {\w+})) "123hello" p f)
 ;; ((seq (tok {\d+}) (tok {[a-z]+}) (tok {\d+})) "123abc456" p f)
-
-;; (UnitTest:run-all 'NLPEG)
