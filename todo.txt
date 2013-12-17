@@ -1,0 +1,1 @@
+[x] Add tests for NLPEG-Choice - suspect :pos is not being updated from skip-white

@@ -2,7 +2,7 @@
 (load "nlpeg.lsp")
 (context MAIN)
 
-(setf x-options '(("start-rule" "digits")))
+(setf x-options '(("start-rule" "digits") ("skip-white" true)))
 (setf x-parser (NLPEG-Parser x-options))
 (:add-rule x-parser (list "digit"       (NLPEG-Expression {\d})))
 (:add-rule x-parser (list "digits"      (NLPEG-Expression {\d+})))
@@ -16,6 +16,9 @@
 (:add-rule x-parser (list "between3to5" (NLPEG-Many "digit" 3 5)))
 (:add-rule x-parser (list "haschar"     (NLPEG-Predicate "char" "has")))
 (:add-rule x-parser (list "nothaschar"  (NLPEG-Predicate "char" "not-has")))
+(:add-rule x-parser (list "seq_choice"  (NLPEG-Sequence
+                                          (list "numsORchars"
+                                                (NLPEG-Expression {-})))))
 
 (define-test (test_default_start_rule)
              (assert= '("123") (:value (:parse x-parser "123abc"))))
@@ -25,6 +28,9 @@
 
 (define-test (test_sequence_of_expressions)
              (assert= '(("123")("abc")) (:value (:parse-rule x-parser "3num3chars" "123abc"))))
+
+(define-test (test_sequence_of_expressions_with_whitespace)
+             (assert= '(("123")("abc")) (:value (:parse-rule x-parser "3num3chars" "123 abc"))))
 
 (define-test (test_failed_sequence_of_expressions_0)
              (assert= nil (:is-matched? (:parse-rule x-parser "3num3chars" "abc123"))))
@@ -93,5 +99,13 @@
 
 (define-test (test_not_has_4)
              (assert= nil (:is-matched? (:parse-rule x-parser "nothaschar" "abc"))))
+
+(define-test (test_seq_choice_1)
+             (assert= '(("1") ("-")) (:value (:parse-rule x-parser "seq_choice" "1-"))))
+
+(define-test (test_skip-white)
+             (assert= 3 (:pos (:skip-white (:get-rule x-parser "seq_choice")
+                                           (NLPEG-ParseResult nil "   1 a" 0 nil nil)
+                                           x-parser))))
 
 (UnitTest:run-all 'MAIN)
