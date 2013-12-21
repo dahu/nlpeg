@@ -5,7 +5,7 @@
 (set 'REGEX-MASK (+ 16 2048))
 (set 'MATCHED-STR 0)
 (set 'END-POS 2)
-(set 'ERROR true)
+(set 'ERROR nil)
 (set 'VERBOSE nil)
 (set 'DEBUG nil)
 (set 'SKIP-WHITE true)
@@ -15,8 +15,7 @@
 (define (d str) (if DEBUG (println str)))
 
 (context MAIN)
-(new Class 'NLPEG-ParseResult)
-(context NLPEG-ParseResult)
+(context 'NLPEG-ParseResult)
 (define (NLPEG-ParseResult:NLPEG-ParseResult is-matched str pos value errmsg)
   (list MAIN:NLPEG-ParseResult is-matched str pos value errmsg))
 (define (NLPEG-ParseResult:is-matched?) (self 1))
@@ -42,22 +41,20 @@
 (define (NLPEG-Parser:get-rule rule) (or (lookup rule (self (:grammar (self))) 1) rule))
 (define (NLPEG-Parser:transform rule) (or (lookup rule (self (:grammar (self))) 2) (fn (v) v)))
 
+(define (NLPEG-Parser:cache-clear)
+  (new Tree 'MAIN:NLPEG-CACHE)
+  (dolist (item (MAIN:NLPEG-CACHE)) (MAIN:NLPEG-CACHE (item 0) nil)))
+
 (define (NLPEG-Parser:cache-dump)
-  (println (string "CACHE: " (self (:cache (self))))))
+  (NLPEG:d (string "NLPEG-CACHE: ") (MAIN:NLPEG-CACHE)))
 
-;; (setf ((self) 3) new-pos)
 (define (NLPEG-Parser:cache-set key res)
-  (println (string "set key= " key))  (println (string "set res= " res))
-  (push (list (string key) res) (self (:cache (self))))
-  )
+  (NLPEG:d (string "cache-set key= " key ", res= " res))
+  (MAIN:NLPEG-CACHE (string key) res))
 
-(define (NLPEG-Parser:cache-find key)
-  (println (string "_______________________ find key= " key))
-  (:cache-dump (self))
-  (find (list (string key) X) (self (:cache (self))) unify))
-
-(define (NLPEG-Parser:cache-get idx)
-  ((self (:cache (self))) idx))
+(define (NLPEG-Parser:cache-get key)
+  (NLPEG:d (string "cache-get key= " key))
+  (MAIN:NLPEG-CACHE (string key)))
 
 ;; TODO: merge a default set of options in with user's options
 ;; start-rule
@@ -73,10 +70,10 @@
   (NLPEG:d (string "NLPEG-Parser:parse-rule, parser=" (self)
                    ", rule= " rule-name
                    ", str= " str))
-  ;; (:clear-cache (self))
   (letn ((parser (self))
          (rule (:get-rule (self) rule-name)))
         (println rule)
+        (:cache-clear parser)
         (:match rule (NLPEG-ParseResult nil str 0 nil nil) parser rule-name)))
 
 (context MAIN)
@@ -126,12 +123,11 @@
                    ", rule-name= " rule-name ", input=" input))
   (letn ((input (:skip-white (self) input parser))
          (key (list (:pos input) rule-name))
-         (idx (:cache-find parser key))
-         (res (if idx (:cache-get parser idx) (:m (self) input parser rule-name))))
-        (if idx
-          (println (string "cache index============================================== " idx))
+         (obj (:cache-get parser key))
+         (res (if obj obj (:m (self) input parser rule-name))))
+        (if obj
+          (NLPEG:d (string "cached object= " obj))
           (:cache-set parser key res))
-        (:cache-dump parser)
         res))
 
 (context MAIN)
@@ -298,37 +294,20 @@
 
 (context MAIN)
 
-(define (joiner lst)
-  (join (map join lst)))
+;; (define (joiner lst)
+;;   (join (map join lst)))
 
-(setf x-options '(("start-rule" "x") ("skip-white" true)))
-(setf x-parser (NLPEG-Parser x-options))
+;; (setf x-options '(("start-rule" "x") ("skip-white" true)))
+;; (setf x-parser (NLPEG-Parser x-options))
 
-(:add-rule x-parser (list "x" (NLPEG-Choice
-                                (list (NLPEG-Sequence
-                                        (list (NLPEG-Expression {1})
-                                              (NLPEG-Expression {a})))
-                                      (NLPEG-Sequence
-                                        (list (NLPEG-Expression {a})
-                                              (NLPEG-Expression {1})))))
-                          joiner
-                          ))
-(println x-parser)
-(println (:parse-rule x-parser "x" " a 1"))
-
-;; (:add-rule X-PARSER ("calc"  (NLPEG-Choice ("add" "sub"))))
-;; (:add-rule x-parser ("add"   (NLPEG-Sequence ("prod" (NLPEG-Expression {\+}) "calc"))))
-;; (:add-rule x-parser ("sub"   (NLPEG-Sequence ("prod" (NLPEG-Expression {-}) "calc"))))
-;; (:add-rule x-parser ("prod"  (NLPEG-Choice ("mul" "num"))))
-;; (:add-rule x-parser ("mul"   (NLPEG-Sequence ("num" (NLPEG-Expression {\*}) "prod"))))
-;; (:add-rule x-parser ("num"   (NLPEG-Expression {\d+})))
-;; (println (:parse-rule x-parser "calc" "1 + 2 - 3"))
-
-;; (:add-rule x-parser '("num"  (NLPEG-Expression {\d+})))
-;; (:add-rule x-parser '("char"  (NLPEG-Expression {[a-z]+})))
-;; (:add-rule x-parser (list "numorchar"  (NLPEG-Choice ((NLPEG-Expression {\d+})(NLPEG-Expression {[a-z]+})))))
-;; (:add-rule x-parser '("numandchar"  (NLPEG-Sequence ("numorchar" "numorchar"))))
-;; (println (:parse-rule x-parser "numandchar" "123abc"))
-
-;; ((seq (tok {\d+}) (tok {\w+})) "123hello" p f)
-;; ((seq (tok {\d+}) (tok {[a-z]+}) (tok {\d+})) "123abc456" p f)
+;; (:add-rule x-parser (list "x" (NLPEG-Choice
+;;                                 (list (NLPEG-Sequence
+;;                                         (list (NLPEG-Expression {1})
+;;                                               (NLPEG-Expression {a})))
+;;                                       (NLPEG-Sequence
+;;                                         (list (NLPEG-Expression {a})
+;;                                               (NLPEG-Expression {1})))))
+;;                           joiner
+;;                           ))
+;; (println x-parser)
+;; (println (:parse-rule x-parser "x" " a 1"))
