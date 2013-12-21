@@ -1,1 +1,8 @@
 [x] Add tests for NLPEG-Choice - suspect :pos is not being updated from skip-white
+[ ] Convert calc.lsp into a test file
+[ ] Add tests for predicate and many
+[ ] Add on-match callback handlers
+[ ] Add commit-points within sequences
+[ ] Add a profiler
+[ ] Add the ability to memoize specific elements
+[ ] Create nlpeg-peg.lsp to parse a PEG format

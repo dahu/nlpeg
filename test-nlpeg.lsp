@@ -2,13 +2,17 @@
 (load "nlpeg.lsp")
 (context MAIN)
 
+(define (joiner x)
+  (println x)
+  (join (map join x)))
+
 (setf x-options '(("start-rule" "digits") ("skip-white" true)))
 (setf x-parser (NLPEG-Parser x-options))
 (:add-rule x-parser (list "digit"       (NLPEG-Expression {\d})))
 (:add-rule x-parser (list "digits"      (NLPEG-Expression {\d+})))
 (:add-rule x-parser (list "char"        (NLPEG-Expression {[a-z]})))
 (:add-rule x-parser (list "chars"       (NLPEG-Expression {[a-z]+})))
-(:add-rule x-parser (list "3num3chars"  (NLPEG-Sequence (list "digits" "chars"))))
+(:add-rule x-parser (list "3num3chars"  (NLPEG-Sequence (list "digits" "chars") joiner)))
 (:add-rule x-parser (list "numsORchars" (NLPEG-Choice (list "digits" "chars"))))
 (:add-rule x-parser (list "maybeMany"   (NLPEG-Many "digit" 0 0)))
 (:add-rule x-parser (list "many"        (NLPEG-Many "digit" 1 0)))
@@ -18,7 +22,15 @@
 (:add-rule x-parser (list "nothaschar"  (NLPEG-Predicate "char" "not-has")))
 (:add-rule x-parser (list "seq_choice"  (NLPEG-Sequence
                                           (list "numsORchars"
-                                                (NLPEG-Expression {-})))))
+                                                (NLPEG-Expression {-})))
+                          joiner
+                          ))
+(:add-rule x-parser (list "memoiser"  (NLPEG-Choice
+                                        (list (NLPEG-Sequence
+                                                (list "digit" "digit" "char"))
+                                              (NLPEG-Sequence
+                                                (list "digit" "char" "char") ))) joiner))
+
 
 (define-test (test_default_start_rule)
              (assert= '("123") (:value (:parse x-parser "123abc"))))
@@ -101,11 +113,15 @@
              (assert= nil (:is-matched? (:parse-rule x-parser "nothaschar" "abc"))))
 
 (define-test (test_seq_choice_1)
-             (assert= '(("1") ("-")) (:value (:parse-rule x-parser "seq_choice" "1-"))))
+             (assert= "1-" (:value (:parse-rule x-parser "seq_choice" "1-"))))
 
-(define-test (test_skip-white)
-             (assert= 3 (:pos (:skip-white (:get-rule x-parser "seq_choice")
-                                           (NLPEG-ParseResult nil "   1 a" 0 nil nil)
-                                           x-parser))))
+(define-test (test_seq_choice_2)
+             (assert= "a-" (:value (:parse-rule x-parser "seq_choice" " a -"))))
+
+(define-test (test_memoiser_1)
+             (assert= "12a" (:value (:parse-rule x-parser "memoiser" " 1 2 a"))))
+
+(define-test (test_memoiser_2)
+             (assert= "1ab" (:value (:parse-rule x-parser "memoiser" " 1 a b"))))
 
 (UnitTest:run-all 'MAIN)
