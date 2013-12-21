@@ -1,6 +1,6 @@
 (load "../../vendor/newlisp-unittest/nl-unittest.lsp")
 (load "nlpeg.lsp")
-(context 'TEST-NLPEG)
+(context 'TEST-NLPEG-SHORTENED-FORMS)
 
 (define (joiner x)
   (println x)
@@ -8,27 +8,27 @@
 
 (setf x-options '(("start-rule" "digits") ("skip-white" true)))
 (setf x-parser (NLPEG-Parser x-options))
-(:add-rule x-parser (list "digit"       (NLPEG-Expression {\d})))
-(:add-rule x-parser (list "digits"      (NLPEG-Expression {\d+})))
-(:add-rule x-parser (list "char"        (NLPEG-Expression {[a-z]})))
-(:add-rule x-parser (list "chars"       (NLPEG-Expression {[a-z]+})))
-(:add-rule x-parser (list "3num3chars"  (NLPEG-Sequence (list "digits" "chars") joiner)))
-(:add-rule x-parser (list "numsORchars" (NLPEG-Choice (list "digits" "chars"))))
-(:add-rule x-parser (list "maybeMany"   (NLPEG-Many "digit" 0 0)))
-(:add-rule x-parser (list "many"        (NLPEG-Many "digit" 1 0)))
-(:add-rule x-parser (list "maybeOne"    (NLPEG-Many "digit" 0 1)))
-(:add-rule x-parser (list "between3to5" (NLPEG-Many "digit" 3 5)))
-(:add-rule x-parser (list "haschar"     (NLPEG-Predicate "char" "has")))
-(:add-rule x-parser (list "nothaschar"  (NLPEG-Predicate "char" "not-has")))
-(:add-rule x-parser (list "seq_choice"  (NLPEG-Sequence
+(:add-rule x-parser (list "digit"       (p-e {\d})))
+(:add-rule x-parser (list "digits"      (p-e {\d+})))
+(:add-rule x-parser (list "char"        (p-e {[a-z]})))
+(:add-rule x-parser (list "chars"       (p-e {[a-z]+})))
+(:add-rule x-parser (list "3num3chars"  (p-and (list "digits" "chars") joiner)))
+(:add-rule x-parser (list "numsORchars" (p-or (list "digits" "chars"))))
+(:add-rule x-parser (list "maybeMany"   (p-maybe-many "digit" 0 0)))
+(:add-rule x-parser (list "many"        (p-many "digit" 1 0)))
+(:add-rule x-parser (list "maybeOne"    (p-maybe-one "digit" 0 1)))
+(:add-rule x-parser (list "between3to5" (p-between "digit" 3 5)))
+(:add-rule x-parser (list "haschar"     (p-has "char" "has")))
+(:add-rule x-parser (list "nothaschar"  (p-not-has "char" "not-has")))
+(:add-rule x-parser (list "seq_choice"  (p-and
                                           (list "numsORchars"
-                                                (NLPEG-Expression {-})))
+                                                (p-e {-})))
                           joiner
                           ))
-(:add-rule x-parser (list "memoiser"  (NLPEG-Choice
-                                        (list (NLPEG-Sequence
+(:add-rule x-parser (list "memoiser"  (p-or
+                                        (list (p-and
                                                 (list "digit" "digit" "char"))
-                                              (NLPEG-Sequence
+                                              (p-and
                                                 (list "digit" "char" "char") ))) joiner))
 
 
@@ -124,4 +124,4 @@
 (define-test (test_memoiser_2)
              (assert= "1ab" (:value (:parse-rule x-parser "memoiser" " 1 a b"))))
 
-(UnitTest:run-all 'TEST-NLPEG)
+(UnitTest:run-all 'TEST-NLPEG-SHORTENED-FORMS)

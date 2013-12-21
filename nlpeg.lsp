@@ -78,10 +78,10 @@
 
 (context MAIN)
 (new Class 'NLPEG-Expression)
+(define (p-e pat) (NLPEG-Expression pat))
 (context NLPEG-Expression)
 (define (NLPEG-Expression:NLPEG-Expression pat) (list MAIN:NLPEG-Expression pat))
 (define (NLPEG-Expression:pat) (self 1))
-
 
 ;; expression matcher
 ;; input is a NLPEG-ParseResult with
@@ -132,6 +132,7 @@
 
 (context MAIN)
 (new NLPEG-Expression 'NLPEG-Sequence)
+(define (p-and seq) (NLPEG-Sequence seq))
 (context NLPEG-Sequence)
 (define (NLPEG-Sequence:NLPEG-Sequence seq) (list MAIN:NLPEG-Sequence seq))
 (define (NLPEG-Sequence:seq) (self 1))
@@ -172,6 +173,7 @@
 
 (context MAIN)
 (new NLPEG-Expression 'NLPEG-Choice)
+(define (p-or seq) (NLPEG-Choice seq))
 (context NLPEG-Choice)
 (define (NLPEG-Choice:NLPEG-Choice seq) (list MAIN:NLPEG-Choice seq))
 (define (NLPEG-Choice:seq) (self 1))
@@ -213,6 +215,10 @@
 
 (context MAIN)
 (new NLPEG-Expression 'NLPEG-Many)
+(define (p-maybe-many expr)  (NLPEG-Many expr 0 0))
+(define (p-many expr)        (NLPEG-Many expr 1 0))
+(define (p-maybe-one expr)   (NLPEG-Many expr 0 1))
+(define (p-between expr n m) (NLPEG-Many expr n m))
 (context NLPEG-Many)
 (define (NLPEG-Many:NLPEG-Many expr cmin cmax) (list MAIN:NLPEG-Many expr cmin cmax))
 (define (NLPEG-Many:expr) (self 1))
@@ -261,6 +267,8 @@
 
 (context MAIN)
 (new NLPEG-Expression 'NLPEG-Predicate)
+(define (p-has expr)      (NLPEG-Predicate expr "has"))
+(define (p-not-has expr)  (NLPEG-Predicate expr "not-has"))
 (context NLPEG-Predicate)
 (define (NLPEG-Predicate:NLPEG-Predicate expr type) (list MAIN:NLPEG-Predicate expr type))
 (define (NLPEG-Predicate:expr) (self 1))
@@ -293,6 +301,7 @@
 ;; end of parser generator
 
 (context MAIN)
+(apply global '(p-e p-and p-or p-maybe-many p-many p-maybe-one p-between p-has p-not-has))
 
 ;; (define (joiner lst)
 ;;   (join (map join lst)))
