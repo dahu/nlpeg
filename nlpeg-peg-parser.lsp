@@ -20,40 +20,43 @@
   (println (string "do-definition elems= " elems))
   (letn ((label (first elems))
          (expression (if (regex {^"} (elems 2) 0)
-                       (string "(p-and (list " (elems 2) ")")
+                       (string "(p-and (list " (elems 2) "))")
                        (elems 2)))
          (cback (if (> (length (elems 3)) 0) (first (elems 3)) "")))
         (set-start-rule label)
-        (string "(:add-rule " expression cback)))
+        (string "(:add-rule " expression " " cback ")")))
 
 (define (do-expression elems)
   (println (string "do-expression elems= " elems))
   (if (> (length (last elems)) 0)
-    (string "xxx (p-or (list " (join (clean (fn (x) (= x "/")) (flat elems)) " ") ")")
+    (string "(p-or (list " (join (clean (fn (x) (= x "/")) (flat elems)) " ") "))")
     (first elems)))
 
 (define (do-sequence elems)
   (println (string "do-sequence elems= " elems))
   (let ((el (clean empty? elems)))
   (if (> (length el) 1)
-    (string "xxx (p-and (list " (join el " ") "))")
+    (string "(p-and (list " (join el " ") "))")
     (first el))))
 
 (define (do-prefix elems)
   (println (string "do-prefix elems= " elems))
   (if (> (length (first elems)) 0)
-    (string "xxx (p-"
-            (if (= (first (first elems)) "!") "not-") "has " (last elems) ")")
+    (string "(p-"
+            (if (= (first (first elems)) "!") "not-") "has " (last elems)
+            ")")
     (last elems)))
 
 (define (do-suffix elems)
   (println (string "do-suffix elems= " elems))
   (if (> (length (last elems)) 0)
-    (string "xxx p-"
+    (string "(p-"
             (cond
               ((= (first (last elems)) "*") "maybe-many")
               ((= (first (last elems)) "+") "many")
-              (true "maybe-one")))
+              (true "maybe-one"))
+            (first elems)
+            ")")
     (first elems)))
 
 (define (do-primary elems)
@@ -64,7 +67,9 @@
       (last elems))
     (elems)))
 
-(define (do-callback elems) (elems 1))
+(define (do-callback elems)
+  (println (string "do-callback elems= " elems))
+  (first elems))
 
 (define (do-option elems)
   (Options ((elems 1) 0) (elems 3)))
@@ -278,9 +283,9 @@
       ;; .root_element = 'calc'
       ;; ;
 (setf the-text [text]
-calc ::= add / sub / prod
+      calc ::= add / sub / prod
+      add    ::=  prod '\+' calc      ->  #add
 [/text])
-      ;; add    ::=  prod '\+' calc      ->  #add
       ;; sub    ::=  prod '-' calc       ->  #sub
       ;; prod   ::=  mul / div / atom
       ;; mul    ::=  atom '\*' prod      ->  #mul
