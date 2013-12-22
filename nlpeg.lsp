@@ -5,7 +5,7 @@
 (set 'REGEX-MASK (+ 16 2048))
 (set 'MATCHED-STR 0)
 (set 'END-POS 2)
-(set 'ERROR nil)
+(set 'ERROR true)
 (set 'VERBOSE nil)
 (set 'DEBUG nil)
 (set 'SKIP-WHITE true)
@@ -124,10 +124,8 @@
   (letn ((input (:skip-white (self) input parser))
          (key (list (:pos input) rule-name))
          (obj (:cache-get parser key))
-         (res (if obj obj (:m (self) input parser rule-name))))
-        (if obj
-          (NLPEG:d (string "cached object= " obj))
-          (:cache-set parser key res))
+         (res (or obj (:m (self) input parser rule-name))))
+        (unless obj (:cache-set parser key res))
         res))
 
 (context MAIN)
@@ -142,7 +140,7 @@
 ;; :str - the input string
 ;; :pos - the current parse position
 (define (NLPEG-Sequence:m input parser rule-name)
-  (NLPEG:e (string "NLPEG-Sequence:m, parser=" parser ", rule-name=" rule-name
+  (NLPEG:d (string "NLPEG-Sequence:m, parser=" parser ", rule-name=" rule-name
                    ", input=  " input
                    ", seq= " (:seq (self))))
   (letn ((sseq (:seq (self)))

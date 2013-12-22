@@ -27,9 +27,9 @@
                           ))
 (:add-rule x-parser (list "memoiser"  (p-or
                                         (list (p-and
-                                                (list "digit" "digit" "char"))
+                                                '("digit" "digit" "char"))
                                               (p-and
-                                                (list "digit" "char" "char") ))) joiner))
+                                                '("digit" "char" "char") ))) joiner))
 
 
 (define-test (test_default_start_rule)
