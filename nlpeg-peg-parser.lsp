@@ -13,51 +13,53 @@
 ;; callbacks {{{1
 
 (define (do-line elems)
-  (dbg (string "Line: " elems))
+  (println (string "line: " elems))
   elems)
 
 (define (do-definition elems)
   (println (string "do-definition elems= " elems))
   (letn ((label (first elems))
-         (expression (if (regex {^"} (elems 2) 0)
-                       (string "(p-and (list " (elems 2) "))")
+         (expression (if (not (list? (elems 2)))
+                       (list 'p-and (cons 'list (copy (elems 2)) ))
                        (elems 2)))
-         (cback (if (> (length (elems 3)) 0) (first (elems 3)) "")))
+         (cback (if (> (length (elems 3)) 0) (first (elems 3)) nil)))
         (set-start-rule label)
-        (string "(:add-rule " expression " " cback ")")))
+        ;; TODO: consider the context
+        ;; What is the context within which the parser is being genrated?
+        (list ':'add-rule expression cback )))
 
 (define (do-expression elems)
   (println (string "do-expression elems= " elems))
   (if (> (length (last elems)) 0)
-    (string "(p-or (list " (join (clean (fn (x) (= x "/")) (flat elems)) " ") "))")
+    (list 'p-or (cons 'list (clean (fn (x) (= x "/")) (flat elems))))
     (first elems)))
 
 (define (do-sequence elems)
   (println (string "do-sequence elems= " elems))
   (let ((el (clean empty? elems)))
   (if (> (length el) 1)
-    (string "(p-and (list " (join el " ") "))")
+    '(sym "p-and" '(list (join el " ") ))
     (first el))))
 
 (define (do-prefix elems)
   (println (string "do-prefix elems= " elems))
   (if (> (length (first elems)) 0)
-    (string "(p-"
+    '(sym (string "p-"
             (if (= (first (first elems)) "!") "not-") "has " (last elems)
-            ")")
+            ))
     (last elems)))
 
 (define (do-suffix elems)
   (println (string "do-suffix elems= " elems))
   (if (> (length (last elems)) 0)
-    (string "(p-"
+    '(sym (string "p-"
             (cond
               ((= (first (last elems)) "*") "maybe-many")
               ((= (first (last elems)) "+") "many")
               (true "maybe-one"))
-            (first elems)
-            ")")
+            (first elems)))
     (first elems)))
+
 
 (define (do-primary elems)
   (println (string "do-primary elems= " elems))
@@ -76,27 +78,30 @@
 
 (define (do-identifier elems)
   (println (string "do-identifier " elems))
-  (string {"} (first elems) {"}))
+  (string (first elems)))
+  ;; (string {"} (first elems) {"}))
 
-(define (do-option_value elems) elems)
+(define (do-option-value elems) elems)
 
 (define (do-regex elems)
   (println (string "do-regex " elems))
-  (string "(p-e {" elems "})"))
+  (string "(p-e " elems ")"))
 
-(define (do-dquoted_string elems)
-  (string (elems 0) (join (elems 1) "") (elems 2)))
+(define (do-quoted-string elems)
+  (println (string "do-quoted-string " elems))
+  (let ((open-quote  (first (pop elems)))
+        (close-quote (first (pop elems -1))))
+    (string open-quote (join (flat elems) "") close-quote)))
 
-(define (do-squoted_string elems)
-  (string (elems 0) (join (elems 1) "") (elems 2)))
-
-(define (do-escaped_dquote elems) (elems 0))
-(define (do-double_backslash elems) (elems 0))
+(define (do-dquoted-string elems) (do-quoted-string elems))
+(define (do-bquoted-string elems) (do-quoted-string elems))
+(define (do-escaped-dquote elems) (elems 0))
+(define (do-double-backslash elems) (elems 0))
 (define (do-backslash elems) (elems 0))
-(define (do-dquote elems) (elems 0))
-(define (do-double_squote elems) (elems 0))
-(define (do-squote elems) (elems 0))
-(define (do-right_arrow elems) (elems 0))
+;; (define (do-dquote elems) (elems 0))
+;; (define (do-b_open_quote elems) (elems 0))
+;; (define (do-b_close_quote elems) (elems 0))
+(define (do-right-arrow elems) (elems 0))
 (define (do-mallet elems) elems)
 (define (do-boolean elems) elems)
 (define (do-comment elems) (string ";;; " (flat elems)))
@@ -148,7 +153,7 @@
                            (p-and (list "identifier" (p-not-has "mallet")))
                            (p-and '("open" "expression" "close"))
                            "regex"))
-                            do-primary))
+                   do-primary))
 
 (:add-rule p (list "callback" (p-and '("right_arrow" "callback_identifier"))
                    do-callback))
@@ -163,7 +168,7 @@
                    do-option-name))
 
 (:add-rule p (list "option_value"
-                   (p-or '("squoted_string" "dquoted_string" "boolean" "number"))
+                   (p-or '("bquoted_string" "dquoted_string" "boolean" "number"))
                    do-option-value))
 
 (:add-rule p (list "callback_identifier" (p-e {[[:alnum:]#._:]+})
@@ -173,7 +178,7 @@
 (:add-rule p (list "identifier" (p-e {\w+})
                    do-identifier))
 
-(:add-rule p (list "regex" (p-or '("dquoted_string" "squoted_string"))
+(:add-rule p (list "regex" (p-or '("dquoted_string" "bquoted_string"))
                    do-regex))
 
 (:add-rule p (list "dquoted_string"
@@ -181,16 +186,15 @@
                                 (p-maybe-many
                                   (p-or (list "double_backslash"
                                               "escaped_dquote"
-                                              (p-e {[^"]}))))
+                                              (p-e {[^"]+}))))
                                 "dquote"))
-                                              do-dq-string))
+                                              do-dquoted-string))
 
-(:add-rule p (list "squoted_string"
-                   (p-and (list "squote"
-                                (p-maybe-many
-                                  (p-or (list (p-e {[^']}) "double_squote")))
-                                "squote"))
-                   do-sq-string))
+(:add-rule p (list "bquoted_string"
+                   (p-and (list "b_open_quote"
+                                (p-maybe-many (p-e "[^}]+"))
+                                "b_close_quote"))
+                   do-bquoted-string))
 
 (:add-rule p (list "escaped_dquote" (p-and '("backslash" "dquote"))
                    do-escaped-dquote))
@@ -198,15 +202,15 @@
 (:add-rule p (list "double_backslash" (p-and '("backslash" "backslash"))
                    do-double-backslash))
 
-(:add-rule p (list "backslash" (p-e {\})))
+(:add-rule p (list "backslash" (p-e {\\})))
 
 (:add-rule p (list "number" (p-e {^(0|[1-9]\d*)?(\.\d+)?})))
 
 (:add-rule p (list "dquote" (p-e {"})))
 
-(:add-rule p (list "double_squote" (p-e {''})))
+(:add-rule p (list "b_open_quote" (p-e "{")))
 
-(:add-rule p (list "squote" (p-e {'})))
+(:add-rule p (list "b_close_quote" (p-e "}")))
 
 (:add-rule p (list "comment" (p-e {;.*$})
                    do-comment))
@@ -284,8 +288,8 @@
       ;; ;
 (setf the-text [text]
       calc ::= add / sub / prod
-      add    ::=  prod '\+' calc      ->  #add
 [/text])
+      ;; add    ::=  prod '\+' calc      ->  #add
       ;; sub    ::=  prod '-' calc       ->  #sub
       ;; prod   ::=  mul / div / atom
       ;; mul    ::=  atom '\*' prod      ->  #mul
